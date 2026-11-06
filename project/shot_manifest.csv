@@ -1,0 +1,27 @@
+clip_id,scene_id,start_s,duration_s,camera,framing,action,expression,lighting,background,dialogue_timing,wardrobe,face_lock,notes
+C01,S01,0,12,locked 35mm eye-level,wide two-shot,서진이 계약서 페이지를 넘김,차분한 집중,desk lamp warm pool with dim ambient,정돈되지 않은 소형 건축사무소,00:03 서진 첫 대사,YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,입모양 생성 금지; 룸톤 별도
+C02,S01,12,12,locked 50mm,medium on 서진,밑줄 친 조항을 손가락으로 짚음,입술을 다문 실무적 표정,soft tungsten desk lamp,계약서와 서류철,00:01 도윤 기간 답변 off-camera,YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,한 동작만
+C03,S01,24,12,locked 50mm,medium on 도윤,프린터 종이를 가지런히 놓음,생각 중인 담담한 표정,낮은 천장 조명과 스탠드,프린터와 설계도,00:02 도윤 재산 답변,YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,손가락 자연스러움
+C04,S01,36,12,locked 85mm,close-up 서진,페이지를 덮고 시선을 올림,짧은 관찰,측면 스탠드 조명,배경은 부드러운 보케,00:02 서진 질문과 도윤 응답,YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,시선축 유지
+C05,S02,48,12,slow 20cm slide-in,medium two-shot,서진이 재단 공문을 테이블에 놓음,절제된 진지함,desk lamp amber and soft shadow,공문과 계약서,00:02 재단 사유 설명 시작,YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,단일 동작
+C06,S02,60,12,locked 50mm,OTS from 도윤,서진이 기록 목록을 설명함,도윤은 듣고 눈을 낮춤,soft side light,건축도면 배경,00:00 서진 대사 지속 8초 후 숨,YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,대사는 후시 녹음
+C07,S02,72,12,locked 85mm,close-up 도윤,계약서 모서리를 맞춤,회피를 의식하는 표정,램프의 부드러운 키라이트,종이 가장자리 foreground,00:02 도윤 이유 답변,YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,미세한 손 동작
+C08,S02,84,12,locked 85mm,close-up 서진,시선을 떼지 않고 질문함,낮은 강도의 경계,부드러운 측면광,배경 암부 유지,00:01 '제가 판단할 일이죠',YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,대사 끝 침묵 2초
+C09,S03,96,12,locked 35mm,overhead insert hands,서진이 별도 방 조항에 체크,실무적인 움직임,균일한 desk practical,계약서·펜·두 사람 손,00:00 서진 '제 방은 따로 쓸게요',YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,텍스트는 후반 합성
+C10,S03,108,12,locked 50mm,medium on 도윤,도윤이 고개를 한 번 끄덕임,무표정에 가까운 수용,따뜻한 스탠드 라이트,책장과 모형 건물,00:01 '원래 그렇게 생각했어요',YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,과장 금지
+C11,S03,120,12,locked 50mm,medium two-shot,서진이 스킨십 조항을 읽음,서로 거리를 유지,낮은 콘트라스트 실내광,테이블을 사이에 둔 구도,00:00-00:08 대사 교환,YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,정지된 구도
+C12,S03,132,12,locked 85mm,close-up 서명,도윤이 펜을 건네받아 서명,손끝이 잠깐 멈춤,국소 스탠드광,계약서 종이결 선명,00:02 서진 '망설여져요?',YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,단일 필기 동작
+C13,S04,144,12,locked 35mm,wide café two-shot,서진과 도윤이 창가에서 대기,말없는 거리감,window daylight 5200K,구청 인근 무표지 카페,대사 없음 4초 후 발소리,YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,실제 간판 제외
+C14,S04,156,12,locked 50mm,medium three-shot,민재가 테이블 옆에 선다,서진은 놀라지 않고 시선을 듦,soft daylight,창가 테이블·종이컵,00:01 민재 일정 전달,YS-W01 KD-W01 MJ-W01,FACE-YSA-01 FACE-KDY-01,민재 얼굴 별도 ID
+C15,S04,168,12,locked 85mm,close-up 서진,짧게 답하고 컵을 잡음,담담한 공개,창문 반사광,배경 카페 손님 흐림,00:02 '결혼하기로 했어요',YS-W01 KD-W01 MJ-W01,FACE-YSA-01 FACE-KDY-01,미소 과장 금지
+C16,S04,180,12,locked 50mm,medium 도윤 then 서진,민재가 화면 밖으로 나가고 두 사람이 마주침,불편함을 낮게 확인,window daylight,빈 의자와 컵,00:02 도윤 질문 00:05 서진 답,YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,컷 전환 없이 간단한 리액션
+C17,S05,192,12,locked 35mm,wide waiting area,둘이 의자에 나란히 앉음,각자 앞을 봄,공공기관 중성 LED 4300K,구청 대기 의자와 번호표,대사 없음; 안내음 분리,YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,화면 속 텍스트 금지
+C18,S05,204,12,locked 85mm,insert folder and drawing,도면 표지가 서류철에서 살짝 나옴,손이 서류철을 닫음,천장광과 자연광 혼합,낡은 도면 모서리,00:02 서진 '그거 우리 엄마 이름인데요',YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,읽을 수 있는 글자는 후반 합성
+C19,S05,216,12,locked 50mm,medium two-shot,서진은 앉은 채 도윤을 봄,도윤은 시선을 피하지 않음,중성 soft fill,민원실 복도 배경,00:01 질문-답변 9초,YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,립싱크는 검증 단계
+C20,S05,228,12,slow pull-back,medium wide,호출음에 도윤이 일어섬,서진은 한 박자 뒤 반응,중성 천장광,번호 호출 창구,00:02 도윤 '접수하고 얘기하죠',YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,단일 기립 동작
+C21,S06,240,12,locked 35mm,side medium,창구에서 두 사람이 서류를 내밈,업무적인 집중,flat public service lighting,구청 접수창구,00:00 직원 안내,YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,화면에 주민정보 노출 금지
+C22,S06,252,12,locked 85mm,insert pens and forms,두 사람이 나란히 서명,도윤 펜이 잠깐 정지 후 움직임,neutral soft overhead,서류 모서리와 펜,대사 없음; 종이소리만,YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,실제 서식·개인정보 금지
+C23,S06,264,12,locked 50mm,medium two-shot,건물 밖으로 같이 걸어 나옴,서로 한 걸음 거리 유지,늦은 오후 자연광,구청 외부 벽면,00:02 '오늘부터 남편인 거네요',YS-W01 KD-W01,FACE-YSA-01 FACE-KDY-01,배경 행인 흐림
+C24,S07,276,12,locked 50mm,wide living room,서진이 계약서를 램프 아래 펼침,피곤하지만 차분함,따뜻한 실용 스탠드 3000K,상자 몇 개가 놓인 작은 집,00:02 시간 질문 준비,YS-W02 KD-W02,FACE-YSA-01 FACE-KDY-01,연속성 의상 변경
+C25,S07,288,12,locked 85mm,insert to close-up,연필 메모를 읽은 서진이 도윤을 봄,표정은 굳지 않고 대답을 기다림,램프 키라이트와 낮은 fill,테이블 위 계약서와 컵,00:01 질문→00:07 '내일 이야기해요',YS-W02 KD-W02,FACE-YSA-01 FACE-KDY-01,타이틀 컷아웃 300초; 메모 후반 합성
+

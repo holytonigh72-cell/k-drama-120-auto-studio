@@ -1,0 +1,9 @@
+scene_id,act,start_s,duration_s,location,cast,wardrobe_ids,emotion,shot_count,dialogue_ids,status
+S01,1,0,42,건축사무소 밤,윤서진|강도윤,YS-W01|KD-W01,신중한 협상,4,D01-D06,planned
+S02,1,42,42,건축사무소 밤,윤서진|강도윤,YS-W01|KD-W01,경계와 호기심,4,D07-D12,planned
+S03,1,84,42,건축사무소 밤,윤서진|강도윤,YS-W01|KD-W01,실무적 합의,4,D13-D20,planned
+S04,2,126,42,구청 앞 카페 낮,윤서진|강도윤|박민재,YS-W01|KD-W01|MJ-W01,예상치 못한 공개,4,D21-D28,planned
+S05,2,168,42,구청 민원실 대기 공간,윤서진|강도윤,YS-W01|KD-W01,의심과 회피,4,D29-D34,planned
+S06,2,210,42,구청 민원실 접수 창구,윤서진|강도윤,YS-W01|KD-W01,조용한 확정,3,D35-D39,planned
+S07,3,252,48,새 집 거실 밤,윤서진|강도윤,YS-W02|KD-W02,확인과 유보,2,D40-D45,planned
+

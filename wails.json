@@ -1,0 +1,2 @@
+{"$schema":"https://wails.io/schemas/config.v2.json","name":"kdrama120","outputfilename":"kdrama120","frontend:dir":"./frontend","frontend:install":"npm install","frontend:build":"npm run build","frontend:dev:watcher":"npm run dev","frontend:dev:serverUrl":"http://localhost:5173"}
+

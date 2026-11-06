@@ -1,0 +1,2 @@
+{"compilerOptions":{"allowJs":true,"checkJs":false,"noEmit":true,"module":"ESNext","moduleResolution":"bundler","target":"ESNext","verbatimModuleSyntax":true,"skipLibCheck":true,"strict":false},"include":["src/**/*.d.ts","src/**/*.js","src/**/*.svelte"]}
+
