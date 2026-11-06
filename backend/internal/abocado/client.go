@@ -1,11 +1,13 @@
 // Package abocado connects to the MCP server configured on this Windows
 // workstation. It supports Codex's remote HTTPS MCP entries and stdio servers.
-// Credentials stay in process memory and are never logged or persisted.
+// Tokens are accepted from a caller or configured helper, never logged. The
+// Windows app persists its own OAuth tokens separately through DPAPI.
 package abocado
 
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,6 +31,7 @@ type Server struct {
 	BearerTokenEnvVar string            `json:"bearer_token_env_var"`
 	HTTPHeaders       map[string]string `json:"http_headers"`
 	EnvHTTPHeaders    map[string]string `json:"env_http_headers"`
+	HTTPHeadersHelper []string          `json:"http_headers_helper"`
 }
 type Config struct {
 	MCPServers map[string]Server `json:"mcpServers"`
@@ -51,6 +54,12 @@ type rpcRequest struct {
 	Method  string `json:"method"`
 	Params  any    `json:"params,omitempty"`
 }
+type HTTPStatusError struct {
+	StatusCode int
+	Header     http.Header
+}
+
+func (e *HTTPStatusError) Error() string { return fmt.Sprintf("MCP HTTP %d", e.StatusCode) }
 
 func FindConfig() []string {
 	var paths []string
@@ -136,6 +145,14 @@ func parseCodexTOML(src, name string) (Server, error) {
 			out.HTTPHeaders = parseInlineMap(val)
 		case "env_http_headers":
 			out.EnvHTTPHeaders = parseInlineMap(val)
+		case "http_headers_helper":
+			out.HTTPHeadersHelper = parseStringArray(val)
+			if len(out.HTTPHeadersHelper) == 0 {
+				single := unquote(val)
+				if single != "" {
+					out.HTTPHeadersHelper = []string{single}
+				}
+			}
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -214,7 +231,12 @@ func Start(s Server, name string) (*Client, error) {
 	}
 	return c, nil
 }
-func StartRemote(s Server, name string) (*Client, error) {
+func StartRemote(s Server, name string) (*Client, error) { return StartAuthorized(s, name, "") }
+
+func StartAuthorized(s Server, name, bearerToken string) (*Client, error) {
+	if s.URL == "" {
+		return Start(s, name)
+	}
 	u, err := url.Parse(s.URL)
 	if err != nil || u.Scheme != "https" {
 		return nil, fmt.Errorf("MCP URL must use HTTPS")
@@ -237,6 +259,33 @@ func StartRemote(s Server, name string) (*Client, error) {
 		}
 		headers["Authorization"] = "Bearer " + token
 	}
+	if len(s.HTTPHeadersHelper) > 0 {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		cmd := exec.CommandContext(ctx, s.HTTPHeadersHelper[0], s.HTTPHeadersHelper[1:]...)
+		output, e := cmd.Output()
+		cancel()
+		if e != nil {
+			return nil, fmt.Errorf("Codex HTTP headers helper failed")
+		}
+		if len(output) > 16*1024 {
+			return nil, fmt.Errorf("Codex HTTP headers helper output is too large")
+		}
+		var extra map[string]string
+		if e = json.Unmarshal(output, &extra); e != nil {
+			return nil, fmt.Errorf("Codex HTTP headers helper must return a JSON string map")
+		}
+		for k, v := range extra {
+			headers[k] = v
+		}
+	}
+	if bearerToken != "" {
+		headers["Authorization"] = "Bearer " + bearerToken
+	}
+	return startRemoteWithHeaders(s, name, headers)
+}
+
+func startRemoteWithHeaders(s Server, name string, headers map[string]string) (*Client, error) {
+	var err error
 	c := &Client{next: 1, name: name, endpoint: s.URL, headers: headers, httpClient: &http.Client{Timeout: 90 * time.Second}}
 	if _, err = c.call("initialize", map[string]any{"protocolVersion": "2024-11-05", "capabilities": map[string]any{}, "clientInfo": map[string]string{"name": "kdrama120-local-agent", "version": "0.1.0"}}); err != nil {
 		return nil, fmt.Errorf("remote MCP initialize failed: %w", err)
@@ -346,8 +395,7 @@ func (c *Client) remoteRequest(req rpcRequest) (json.RawMessage, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-		return nil, fmt.Errorf("MCP HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		return nil, &HTTPStatusError{StatusCode: resp.StatusCode, Header: resp.Header.Clone()}
 	}
 	if sid := resp.Header.Get("Mcp-Session-Id"); sid != "" {
 		c.session = sid
@@ -410,6 +458,25 @@ func ValidateTools(raw json.RawMessage) error {
 	}
 	if !found["abocado_get_history"] || !found["abocado_get_job_status"] {
 		return errors.New("configured MCP server does not expose Abocado history/status tools")
+	}
+	return nil
+}
+
+func ValidateRecoveryTools(raw json.RawMessage) error {
+	var r struct {
+		Tools []struct {
+			Name string `json:"name"`
+		} `json:"tools"`
+	}
+	if err := json.Unmarshal(raw, &r); err != nil {
+		return err
+	}
+	found := map[string]bool{}
+	for _, t := range r.Tools {
+		found[t.Name] = true
+	}
+	if !found["abocado_get_history"] || !found["abocado_get_job_status"] {
+		return errors.New("configured MCP server must expose Abocado history and job-status tools")
 	}
 	return nil
 }

@@ -16,6 +16,24 @@ export namespace pipeline {
 	        this.gain_db = source["gain_db"];
 	    }
 	}
+	export class ConnectionStatus {
+	    state: string;
+	    server?: string;
+	    authenticated: boolean;
+	    message: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ConnectionStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.state = source["state"];
+	        this.server = source["server"];
+	        this.authenticated = source["authenticated"];
+	        this.message = source["message"];
+	    }
+	}
 	export class Estimate {
 	    currency: string;
 	    total: number;
@@ -157,6 +175,7 @@ export namespace pipeline {
 	    model: string;
 	    charged_credits: number;
 	    url: string;
+	    sources?: string[];
 	    local_path?: string;
 	    status: string;
 	    error?: string;
@@ -172,6 +191,7 @@ export namespace pipeline {
 	        this.model = source["model"];
 	        this.charged_credits = source["charged_credits"];
 	        this.url = source["url"];
+	        this.sources = source["sources"];
 	        this.local_path = source["local_path"];
 	        this.status = source["status"];
 	        this.error = source["error"];

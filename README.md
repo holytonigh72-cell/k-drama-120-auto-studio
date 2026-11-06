@@ -2,7 +2,7 @@
 
 Windows용 Wails v2 + Svelte + Go 데스크톱 앱입니다. 로컬 프로젝트 저장, 단계별 재개/오류 복구, 무료 모의 제작, 로컬 자산 가져오기, 기존 Abocado 작업 기록 복구·다운로드, SRT 검사와 300초 FFmpeg 편집을 제공합니다.
 
-기존 `.agents/skills/k-drama-120-auto-studio/SKILL.md`의 원본성·연속성·한국어 립싱크·예산 승인 정책을 반영했습니다. 로컬 Codex 설정의 Abocado URL을 읽어 Streamable HTTP MCP를 연결하고, 설정에 토큰 환경변수가 있으면 메모리에서만 사용합니다. 앱은 비밀값을 파일에 저장하거나 출력하지 않습니다. 조직의 Codex 로그인이 MCP 토큰으로 공개되지 않는 환경에서는 서버가 직접 연결을 거부할 수 있습니다.
+기존 `.agents/skills/k-drama-120-auto-studio/SKILL.md`의 원본성·연속성·한국어 립싱크·예산 승인 정책을 반영했습니다. Windows 앱은 로컬 Codex 설정에서 Abocado MCP 주소와 선택적 헤더 헬퍼를 읽습니다. OAuth가 필요한 서버는 앱의 연결 버튼에서 브라우저 승인 후 Windows 사용자 DPAPI로 토큰을 암호화해 저장하고 만료 시 갱신합니다. 토큰은 설정 파일이나 로그에 기록하지 않습니다.
 
 ## 준비
 
@@ -33,7 +33,7 @@ cd backend
 go run ./cmd/agent -workspace ./data
 ```
 
-기존 미디어 자산은 앱에서 로컬 폴더를 선택하거나, Codex 설정에 연결할 수 있을 때 **Abocado 작업 복구·다운로드**를 누르면 됩니다. 복구는 완료된 기록만 조회하고 생성 API를 호출하지 않습니다. 14초보다 긴 음성은 립싱크 전에 FFmpeg로 분할해야 합니다.
+앱의 Abocado 연결 테스트는 DNS·인증·history/status 도구를 확인하며 생성 요청을 보내지 않습니다. 연결 후 **완료된 Abocado 작업에서 기존 결과 복구·다운로드**를 선택하면 이 파일럿에 지정된 기존 작업 ID만 조회하고, history에 저장된 S3 객체 URL까지 CDN 다운로드의 대체 경로로 시도합니다. 완료 결과만 복구하며 생성 API를 호출하지 않습니다. 14초보다 긴 음성은 립싱크 전에 FFmpeg로 분할해야 합니다.
 
 ## 비용과 승인
 

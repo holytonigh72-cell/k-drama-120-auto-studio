@@ -44,6 +44,26 @@ func (a *App) ChooseImportFolder() ([]desktopbridge.ImportResult, error) {
 func (a *App) RecoverExistingAssets(configPath string) ([]desktopbridge.RecoveredAsset, error) {
 	return a.service.RecoverExistingAssets(configPath)
 }
+func (a *App) TestAbocadoConnection(configPath string) desktopbridge.ConnectionStatus {
+	return a.service.TestAbocadoConnection(configPath)
+}
+func (a *App) BeginAbocadoAuth(configPath string) (string, error) {
+	flow, err := a.service.BeginAbocadoAuth(configPath)
+	if err != nil {
+		return "", err
+	}
+	runtime.BrowserOpenURL(a.ctx, flow.URL)
+	go func() {
+		e := <-flow.Done
+		if e != nil {
+			runtime.EventsEmit(a.ctx, "abocado:auth-failed", e.Error())
+			return
+		}
+		status := a.service.TestAbocadoConnection(configPath)
+		runtime.EventsEmit(a.ctx, "abocado:connected", status)
+	}()
+	return "인증 페이지를 열었습니다. Windows 브라우저에서 승인한 뒤 이 창으로 돌아오세요.", nil
+}
 func (a *App) RenderProject(videos []string, audio []desktopbridge.AudioClip, subtitle, output, resolution string) error {
 	return a.service.RenderProject(videos, audio, subtitle, output, resolution)
 }

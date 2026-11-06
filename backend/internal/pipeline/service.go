@@ -3,24 +3,111 @@ package pipeline
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
+	"time"
 
 	"kdrama120/internal/abocado"
 )
 
 type Service struct {
-	store  *Store
-	root   string
-	runner Runner
+	store        *Store
+	root         string
+	runner       Runner
+	abocadoToken string
+	vault        abocado.TokenVault
 }
 
 func NewService(root string) *Service {
 	store, _ := NewStore(filepath.Join(root, "projects"))
-	return &Service{store: store, root: root, runner: MockRunner{}}
+	return &Service{store: store, root: root, runner: MockRunner{}, vault: abocado.TokenVault{Path: filepath.Join(root, "abocado.oauth")}}
+}
+
+func (s *Service) SetAbocadoToken(token string) { s.abocadoToken = token }
+
+type ConnectionStatus struct {
+	State         string `json:"state"`
+	Server        string `json:"server,omitempty"`
+	Authenticated bool   `json:"authenticated"`
+	Message       string `json:"message"`
+}
+
+func (s *Service) BeginAbocadoAuth(configPath string) (*abocado.OAuthFlow, error) {
+	if configPath == "" {
+		configPath = abocado.FirstAvailableConfig()
+	}
+	if configPath == "" {
+		return nil, fmt.Errorf("Codex MCP configuration was not found")
+	}
+	cfg, err := abocado.LoadServer(configPath, "abocado")
+	if err != nil {
+		return nil, err
+	}
+	if cfg.URL == "" {
+		return nil, fmt.Errorf("OAuth login requires a remote Codex MCP URL")
+	}
+	return abocado.BeginOAuth(context.Background(), cfg.URL, s.vault)
+}
+
+func (s *Service) TestAbocadoConnection(configPath string) ConnectionStatus {
+	if configPath == "" {
+		configPath = abocado.FirstAvailableConfig()
+	}
+	if configPath == "" {
+		return ConnectionStatus{State: "not_configured", Message: "Codex MCP configuration was not found"}
+	}
+	cfg, err := abocado.LoadServer(configPath, "abocado")
+	if err != nil {
+		return ConnectionStatus{State: "not_configured", Message: err.Error()}
+	}
+	host := "local stdio MCP"
+	if cfg.URL != "" {
+		u, e := url.Parse(cfg.URL)
+		if e != nil || u.Hostname() == "" {
+			return ConnectionStatus{State: "invalid_config", Message: "Abocado MCP URL is invalid"}
+		}
+		host = u.Hostname()
+		dnsCtx, dnsCancel := context.WithTimeout(context.Background(), 4*time.Second)
+		_, e = net.DefaultResolver.LookupHost(dnsCtx, host)
+		if e != nil {
+			controlCtx, controlCancel := context.WithTimeout(context.Background(), 3*time.Second)
+			_, controlErr := net.DefaultResolver.LookupHost(controlCtx, "example.com")
+			controlCancel()
+			dnsCancel()
+			if controlErr != nil {
+				return ConnectionStatus{State: "dns_unavailable", Server: host, Message: "Windows DNS could not resolve Abocado or a public connectivity check. Check this PC's network/DNS, then run the in-app test again."}
+			}
+			return ConnectionStatus{State: "host_unresolved", Server: host, Message: "Public DNS works, but the Abocado MCP host did not resolve."}
+		}
+		dnsCancel()
+	}
+	tokens, e := s.vault.LoadFresh(context.Background())
+	if e == nil {
+		s.abocadoToken = tokens.AccessToken
+	}
+	client, e := abocado.StartAuthorized(cfg, "abocado", s.abocadoToken)
+	if e != nil {
+		var status *abocado.HTTPStatusError
+		if errors.As(e, &status) && (status.StatusCode == http.StatusUnauthorized || status.StatusCode == http.StatusForbidden) {
+			return ConnectionStatus{State: "authentication_required", Server: host, Message: "Abocado requires one-time authorization. Use Connect in this window."}
+		}
+		return ConnectionStatus{State: "unavailable", Server: host, Authenticated: s.abocadoToken != "", Message: e.Error()}
+	}
+	defer client.Close()
+	tools, e := client.ListTools()
+	if e != nil {
+		return ConnectionStatus{State: "unavailable", Server: host, Authenticated: s.abocadoToken != "", Message: e.Error()}
+	}
+	if e = abocado.ValidateRecoveryTools(tools); e != nil {
+		return ConnectionStatus{State: "connected_limited", Server: host, Authenticated: s.abocadoToken != "", Message: e.Error()}
+	}
+	return ConnectionStatus{State: "connected", Server: host, Authenticated: true, Message: "Abocado MCP is reachable; history and status tools are ready. No generation was submitted."}
 }
 func (s *Service) ListProjects() ([]*Project, error) { return s.store.List() }
 func (s *Service) CreateProject(title, premise string) (*Project, error) {
@@ -61,14 +148,15 @@ func (s *Service) ApproveBudget(id string, e Estimate, cap float64) (*Project, e
 }
 
 type RecoveredAsset struct {
-	JobKey    string `json:"job_key"`
-	Kind      string `json:"kind"`
-	Model     string `json:"model"`
-	Credits   int    `json:"charged_credits"`
-	URL       string `json:"url"`
-	LocalPath string `json:"local_path,omitempty"`
-	Status    string `json:"status"`
-	Error     string `json:"error,omitempty"`
+	JobKey    string   `json:"job_key"`
+	Kind      string   `json:"kind"`
+	Model     string   `json:"model"`
+	Credits   int      `json:"charged_credits"`
+	URL       string   `json:"url"`
+	Sources   []string `json:"sources,omitempty"`
+	LocalPath string   `json:"local_path,omitempty"`
+	Status    string   `json:"status"`
+	Error     string   `json:"error,omitempty"`
 }
 type mcpToolEnvelope struct {
 	Content []struct {
@@ -118,7 +206,10 @@ func (s *Service) RecoverAbocadoAssets(configPath, serverName string) ([]Recover
 	if err != nil {
 		return nil, err
 	}
-	client, err := abocado.Start(cfg, serverName)
+	if tokens, tokenErr := s.vault.LoadFresh(context.Background()); tokenErr == nil {
+		s.abocadoToken = tokens.AccessToken
+	}
+	client, err := abocado.StartAuthorized(cfg, serverName, s.abocadoToken)
 	if err != nil {
 		return nil, err
 	}
@@ -127,58 +218,27 @@ func (s *Service) RecoverAbocadoAssets(configPath, serverName string) ([]Recover
 	if err != nil {
 		return nil, err
 	}
-	if err = abocado.ValidateTools(raw); err != nil {
-		return nil, err
-	}
-	jobsRaw, err := client.CallTool("abocado_list_jobs", map[string]any{"limit": 100, "phase_filter": "done"})
-	if err != nil {
-		return nil, err
-	}
-	data, err := toolData(jobsRaw)
-	if err != nil {
-		return nil, err
-	}
-	var listed struct {
-		Jobs []struct {
-			JobKey  string `json:"job_key"`
-			Model   string `json:"model"`
-			Type    string `json:"type"`
-			Phase   string `json:"phase"`
-			Credits int    `json:"charged_credits"`
-			Created string `json:"created_at"`
-		} `json:"jobs"`
-	}
-	if err = json.Unmarshal(data, &listed); err != nil {
+	if err = abocado.ValidateRecoveryTools(raw); err != nil {
 		return nil, err
 	}
 	type candidate struct {
 		JobKey, Model, Kind string
 		Credits             int
-		Created             string
 	}
-	var videos, audios []candidate
-	for _, j := range listed.Jobs {
-		if j.Phase != "done" {
-			continue
-		}
-		if j.Type == "video" && strings.Contains(j.Model, "seedance-v2-mini-reference-i2v") {
-			videos = append(videos, candidate{j.JobKey, j.Model, "video", j.Credits, j.Created})
-		}
-		if j.Type == "audio" && j.Model == "se-gemini-3.1-flash-t2a" {
-			audios = append(audios, candidate{j.JobKey, j.Model, "audio", j.Credits, j.Created})
-		}
+	// These are the specific already-paid results for this pilot. Recovery is
+	// intentionally keyed by immutable job IDs and never searches for a substitute.
+	selected := []candidate{
+		{"mcp_google_8ef4086c_20261106020452_8uaaro", "se-bytedance-seedance-v2-mini-reference-i2v", "video", 2410},
+		{"mcp_google_8ef4086c_20261106154013_oaepbc", "se-gemini-3.1-flash-t2a", "audio", 41},
+		{"mcp_google_8ef4086c_20261106154015_mr519y", "se-gemini-3.1-flash-t2a", "audio", 38},
+		{"mcp_google_8ef4086c_20261106154017_yi9gzw", "se-gemini-3.1-flash-t2a", "audio", 101},
+		{"mcp_google_8ef4086c_20261106154019_mfu58e", "se-gemini-3.1-flash-t2a", "audio", 14},
 	}
-	sort.Slice(videos, func(i, j int) bool { return videos[i].Created > videos[j].Created })
-	sort.Slice(audios, func(i, j int) bool { return audios[i].Created > audios[j].Created })
-	if len(videos) > 1 {
-		videos = videos[:1]
-	}
-	if len(audios) > 4 {
-		audios = audios[:4]
-	}
-	selected := append(videos, audios...)
-	if len(selected) == 0 {
-		return nil, fmt.Errorf("no matching completed video/TTS jobs found")
+	historySources, historyErr := s.abocadoHistorySources(client)
+	if historyErr != nil && len(historySources) == 0 {
+		// Job status still provides the CDN URL. History is used only to add the
+		// S3-origin fallback, so it must not prevent recovery from being attempted.
+		historySources = map[string][]string{}
 	}
 	dest := filepath.Join(s.root, "assets", "recovered")
 	downloader := abocado.NewDownloader()
@@ -204,13 +264,15 @@ func (s *Service) RecoverAbocadoAssets(configPath, serverName string) ([]Recover
 			out = append(out, RecoveredAsset{JobKey: j.JobKey, Kind: j.Kind, Model: j.Model, Credits: j.Credits, Status: "not_ready"})
 			continue
 		}
+		sources := append([]string{}, status.Result.URLs...)
+		sources = append(sources, historySources[j.JobKey]...)
 		ext := ".mp4"
 		if j.Kind == "audio" {
 			ext = ".mp3"
 		}
-		a := abocado.Asset{JobKey: j.JobKey, Kind: j.Kind, URL: status.Result.URLs[0], Name: j.JobKey + ext, Model: j.Model, Credits: j.Credits}
-		saved, e := downloader.Download(context.Background(), a, dest)
-		ra := RecoveredAsset{JobKey: j.JobKey, Kind: j.Kind, Model: j.Model, Credits: j.Credits, URL: a.URL, LocalPath: saved.LocalPath, Status: saved.Status}
+		a := abocado.Asset{JobKey: j.JobKey, Kind: j.Kind, URL: sources[0], URLs: sources, Name: j.JobKey + ext, Model: j.Model, Credits: j.Credits}
+		saved, e := downloader.DownloadFromSources(context.Background(), a, sources, dest)
+		ra := RecoveredAsset{JobKey: j.JobKey, Kind: j.Kind, Model: j.Model, Credits: j.Credits, URL: a.URL, Sources: sources, LocalPath: saved.LocalPath, Status: saved.Status}
 		if e != nil {
 			ra.Error = e.Error()
 		}
@@ -227,5 +289,69 @@ func (s *Service) RecoverAbocadoAssets(configPath, serverName string) ([]Recover
 		return out, err
 	}
 	return out, nil
+}
+
+func (s *Service) abocadoHistorySources(client *abocado.Client) (map[string][]string, error) {
+	var result struct {
+		List []struct {
+			Prompt struct {
+				ExternalPromptID string `json:"external_prompt_id"`
+			} `json:"prompt_metadata"`
+			Images []struct {
+				CDNURL    string `json:"cdn_url"`
+				ObjectURL string `json:"object_url"`
+			} `json:"images"`
+		} `json:"list"`
+	}
+	known := map[string]bool{
+		"mcp_google_8ef4086c_20261106020452_8uaaro": true,
+		"mcp_google_8ef4086c_20261106154013_oaepbc": true,
+		"mcp_google_8ef4086c_20261106154015_mr519y": true,
+		"mcp_google_8ef4086c_20261106154017_yi9gzw": true,
+		"mcp_google_8ef4086c_20261106154019_mfu58e": true,
+	}
+	out := map[string][]string{}
+	for page := 1; page <= 20; page++ {
+		raw, err := client.CallTool("abocado_get_history", map[string]any{"limit": 50, "page": page})
+		if err != nil {
+			return out, err
+		}
+		data, err := toolData(raw)
+		if err != nil {
+			return out, err
+		}
+		if err = json.Unmarshal(data, &result); err != nil {
+			return out, err
+		}
+		if len(result.List) == 0 {
+			break
+		}
+		for _, job := range result.List {
+			id := job.Prompt.ExternalPromptID
+			if !known[id] {
+				continue
+			}
+			for _, media := range job.Images {
+				for _, candidate := range []string{media.CDNURL, media.ObjectURL} {
+					if candidate != "" && !containsString(out[id], candidate) {
+						out[id] = append(out[id], candidate)
+					}
+				}
+			}
+		}
+		if len(out) == len(known) {
+			break
+		}
+	}
+	return out, nil
+}
+
+func containsString(items []string, value string) bool {
+	for _, item := range items {
+		if item == value {
+			return true
+		}
+	}
+	return false
 }
 
